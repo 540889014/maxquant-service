@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>用户管理</h1>
+            <nav>
+                <a href="index.html">返回首页</a>
+            </nav>
+        </header>
+        <main>
+            <section v-if="isAdmin">
+                <h2>添加新用户</h2>
+                <form @submit.prevent="addUser">
+                    <div>
+                        <label for="newUsername">用户名:</label>
+                        <input type="text" id="newUsername" v-model="newUsername" required>
+                    </div>
+                    <div>
+                        <label for="newPassword">密码:</label>
+                        <input type="password" id="newPassword" v-model="newPassword" required>
+                    </div>
+                    <div>
+                        <label for="newRole">角色:</label>
+                        <select id="newRole" v-model="newRole" required>
+                            <option value="USER">普通用户</option>
+                            <option value="ADMIN">管理员</option>
+                        </select>
+                    </div>
+                    <button type="submit">添加用户</button>
+                </form>
+            </section>
+            <section>
+                <h2>用户列表</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>用户名</th>
+                            <th>角色</th>
+                            <th>创建时间</th>
+                            <th v-if="isAdmin">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="user in users" :key="user.id">
+                            <td>{{ user.id }}</td>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.role === 'ADMIN' ? '管理员' : '普通用户' }}</td>
+                            <td>{{ user.createdAt }}</td>
+                            <td v-if="isAdmin">
+                                <button @click="deleteUser(user.id)">删除</button>
+                                <button @click="openUpdatePasswordModal(user)">修改密码</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+            <div v-if="showModal" class="modal">
+                <div class="modal-content">
+                    <span class="close" @click="closeModal">&times;</span>
+                    <h2>修改密码</h2>
+                    <form @submit.prevent="updatePassword">
+                        <div>
+                            <label for="updatePassword">新密码:</label>
+                            <input type="password" id="updatePassword" v-model="updatePassword" required>
+                        </div>
+                        <button type="submit">确认修改</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="vue.min.js"></script>
+    <script src="axios.min.js"></script>
+    <script src="user-management.js"></script>
+</body>
+</html> 
