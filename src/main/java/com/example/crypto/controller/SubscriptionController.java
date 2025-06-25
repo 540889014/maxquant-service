@@ -33,8 +33,10 @@ public class SubscriptionController {
             @RequestParam String symbol,
             @RequestParam String dataType,
             @RequestParam String instType,
-            @RequestParam(required = false) String timeframe) {
-        logger.info("訂閱リクエスト: username={}, symbol={}, dataType={}, instType={}, timeframe={}", username, symbol, dataType, instType, timeframe);
+            @RequestParam(required = false) String timeframe,
+            @RequestParam String exchange
+    ) {
+        logger.info("訂閱リクエスト: username={}, symbol={}, dataType={}, instType={}, timeframe={}, exchange={}", username, symbol, dataType, instType, timeframe, exchange);
         try {
             if (username == null || username.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body("ユーザ名が必要です");
@@ -48,11 +50,14 @@ public class SubscriptionController {
             if (instType == null || instType.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body("契約タイプが必要です");
             }
+            if (exchange == null || exchange.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("交易所(exchange)が必要です");
+            }
             if (dataType.equals("ohlc") && (timeframe == null || timeframe.trim().isEmpty())) {
                 return ResponseEntity.badRequest().body("OHLC データには時間枠が必要です");
             }
 
-            Subscription subscription = subscriptionService.subscribe(username, symbol, dataType, instType, timeframe);
+            Subscription subscription = subscriptionService.subscribe(username, symbol, dataType, instType, timeframe, exchange);
             if ("depth".equals(dataType)) {
                 okxService.updateDepthSubscriptions();
             }
@@ -67,8 +72,10 @@ public class SubscriptionController {
     public ResponseEntity<?> unsubscribe(
             @RequestParam String username,
             @RequestParam String symbol,
-            @RequestParam String dataType) {
-        logger.info("取消訂閱リクエスト: username={}, symbol={}, dataType={}", username, symbol, dataType);
+            @RequestParam String dataType,
+            @RequestParam String exchange
+    ) {
+        logger.info("取消訂閱リクエスト: username={}, symbol={}, dataType={}, exchange={}", username, symbol, dataType, exchange);
         try {
             if (username == null || username.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body("ユーザ名が必要です");
@@ -79,40 +86,38 @@ public class SubscriptionController {
             if (dataType == null || dataType.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body("データタイプが必要です");
             }
-
-            subscriptionService.unsubscribe(username, symbol, dataType);
+            if (exchange == null || exchange.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("交易所(exchange)が必要です");
+            }
+            subscriptionService.unsubscribe(username, symbol, dataType, exchange);
             // 若為深度數據，更新 WebSocket 訂閱
             if ("depth".equals(dataType)) {
                 okxService.updateDepthSubscriptions();
             }
             return ResponseEntity.ok("取消訂閱成功");
         } catch (Exception e) {
-            logger.error("取消訂閱リクエスト処理に失敗: username={}, symbol={}, dataType={}, error={}", username, symbol, dataType, e.getMessage(), e);
+            logger.error("取消訂閱リクエスト処理に失敗: username={}, symbol={}, dataType={}, exchange={}, error={}", username, symbol, dataType, exchange, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("取消訂閱失敗: " + e.getMessage());
         }
     }
 
     @GetMapping("/user")
-    public ResponseEntity<?> getSubscriptionsByUsername(@RequestParam String username) {
-        logger.info("ユーザの訂閱情報リクエスト: username={}", username);
-        try {
-            List<Subscription> subscriptions = subscriptionService.getSubscriptionsByUsername(username);
-            return ResponseEntity.ok(subscriptions);
-        } catch (Exception e) {
-            logger.error("ユーザの訂閱情報リクエスト処理に失敗: username={}, error={}", username, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("ユーザの訂閱情報取得に失敗: " + e.getMessage());
+    public ResponseEntity<List<Subscription>> getSubscriptionsByUsername(
+            @RequestParam String username,
+            @RequestParam(required = false) String exchange
+    ) {
+        if (exchange == null || exchange.trim().isEmpty()) {
+            return ResponseEntity.ok(subscriptionService.getSubscriptionsByUsername(username));
+        } else {
+            return ResponseEntity.ok(subscriptionService.getSubscriptionsByUsernameAndExchange(username, exchange));
         }
     }
 
     @GetMapping("/type")
-    public ResponseEntity<?> getSubscriptionsByDataType(@RequestParam String dataType) {
-        logger.info("データタイプの訂閱情報リクエスト: dataType={}", dataType);
-        try {
-            List<Subscription> subscriptions = subscriptionService.getSubscriptionsByDataType(dataType);
-            return ResponseEntity.ok(subscriptions);
-        } catch (Exception e) {
-            logger.error("データタイプの訂閱情報リクエスト処理に失敗: dataType={}, error={}", dataType, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("データタイプの訂閱情報取得に失敗: " + e.getMessage());
-        }
+    public ResponseEntity<List<Subscription>> getSubscriptionsByDataType(
+            @RequestParam String dataType,
+            @RequestParam String exchange
+    ) {
+        return ResponseEntity.ok(subscriptionService.getSubscriptionsByDataTypeAndExchange(dataType, exchange));
     }
 }

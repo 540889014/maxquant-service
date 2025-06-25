@@ -13,8 +13,10 @@ import java.util.List;
  * 市場データの取得を定義
  */
 public interface MarketService {
-    List<KlineDataDTO> getKlineData(String symbol, String timeframe, Long startTime, Long endTime);
-    RealtimeData getRealtimeData(String symbol);
-    List<CryptoMetadata> getInstruments(String instType);
-    DepthData getDepthData(String symbol);
+    List<KlineDataDTO> getKlineData(String symbol, String timeframe, Long startTime, Long endTime, String exchange);
+    RealtimeData getRealtimeData(String symbol, String exchange);
+    List<CryptoMetadata> getInstruments(String instType, String exchange);
+    DepthData getDepthData(String symbol, String exchange);
+    List<DepthData> getDepthData(String symbol, String exchange, Long startTime, Long endTime);
+    List<DepthData> getDepthDataPage(String symbol, String exchange, Long startTime, Long endTime, int pageSize);
 }

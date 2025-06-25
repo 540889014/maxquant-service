@@ -1,8 +1,10 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/quant_data
-    username: xiaoxiao_coder
-    password: 
+    username: postgres
+    password: 1235679@
+    #    username: xiaoxiao_coder
+    #    password:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -21,3 +23,27 @@ logging:
   level:
     root: INFO
     com.example.crypto: INFO
+proxy:
+  enabled: false
+  type: http # http 或 socks
+  host: 127.0.0.1
+  port: 9098
+  ws-type: socks
+  ws-port: 19250
+binance:
+  api-url: https://api.binance.com
+  ws-url: wss://stream.binance.com:9443/ws
+
+backtest:
+  python:
+    # For local macOS development, ensure 'python3' points to a valid interpreter.
+    # For production CentOS deployment, this should point to the compiled Python path.
+    executable: python3.13
+    runner-script-path: /opt/crypto-data-service/maxquant_backtest/launcher_new.py
+  # executable: python3
+clickhouse:
+  datasource:
+    url: jdbc:clickhouse://localhost:8123/default
+    username: default
+    password: "1235679@"
+    driver-class-name: com.clickhouse.jdbc.ClickHouseDriver

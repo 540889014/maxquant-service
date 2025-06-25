@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <title>价差图工具</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/style.css">
-    <script src="/vue.min.js"></script>
-    <script src="/axios.min.js"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/js/vue.min.js"></script>
+    <script src="/js/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <style>
         .dropdown-list { border: 1px solid #ccc; max-height: 200px; overflow-y: auto; background: #fff; position: absolute; z-index: 10; width: 100%; }
@@ -54,6 +54,6 @@
     <button @click="calculateSpread" :disabled="!selected1 || !selected2">计算价差曲线</button>
     <div id="spreadChart" style="margin-top:40px;"></div>
 </div>
-<script src="/spread.js"></script>
+<script src="/js/spread.js"></script>
 </body>
 </html> 

@@ -52,8 +52,8 @@ public class CustomErrorController implements ErrorController {
                     return null;
                 } catch (Exception e) {
                     logger.error("リダイレクトエラー: {}", e.getMessage(), e);
-                    errorDetails.put("error", "認証が必要です");
-                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorDetails);
+                errorDetails.put("error", "認証が必要です");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorDetails);
                 }
             } else if (statusCode == 500) {
                 errorDetails.put("error", "サーバーエラー");

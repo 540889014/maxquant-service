@@ -32,6 +32,9 @@ public class Subscription {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Column(nullable = true)
+    private String exchange;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getUsername() { return username; }
@@ -46,4 +49,6 @@ public class Subscription {
     public void setTimeframe(String timeframe) { this.timeframe = timeframe; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public String getExchange() { return exchange; }
+    public void setExchange(String exchange) { this.exchange = exchange; }
 }

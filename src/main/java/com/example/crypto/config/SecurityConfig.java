@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpMethod;
 
 import jakarta.servlet.Filter;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,7 +42,8 @@ public class SecurityConfig {
                     .authorizeHttpRequests(auth -> auth
                             .requestMatchers("/", "/index.html", "/static/**", "/js/**", "/css/**", "/images/**", "/fonts/**", "/**.js", "/**.css", "/**.png", "/**.jpg", "/**.jpeg", "/**.gif", "/**.svg", "/favicon.ico", "/error",
                                     "/api/v1/auth/**", "/api/v5/public/**", "/api/v1/public/**", "/ws/**", "/subscriptions-list.html",
-                                    "/spread.html", "/spread.js"
+                                    "/spread.html", "/spread.js",
+                                    "/api/v1/data-correction/**"
                             )
                             .permitAll()
                             .anyRequest().authenticated()
@@ -85,9 +87,17 @@ public class SecurityConfig {
         public void doFilter(jakarta.servlet.ServletRequest request, jakarta.servlet.ServletResponse response,
                              jakarta.servlet.FilterChain chain) throws IOException, jakarta.servlet.ServletException {
             HttpServletRequest httpRequest = (HttpServletRequest) request;
+            String requestURI = httpRequest.getRequestURI();
+
+            // WebSocket路径的认证由ChannelInterceptor在STOMP CONNECT帧处理，这里直接放行HTTP请求以避免不必要的警告
+            if (requestURI.startsWith("/ws/")) {
+                chain.doFilter(request, response);
+                return;
+            }
+
             HttpServletResponse httpResponse = (HttpServletResponse) response;
             String authHeader = httpRequest.getHeader("Authorization");
-            logger.debug("驗證請求: URI={}, Authorization={}", httpRequest.getRequestURI(), authHeader != null ? "存在" : "無");
+            logger.debug("驗證請求: URI={}, Authorization={}", requestURI, authHeader != null ? "存在" : "無");
 
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String token = authHeader.substring(7);
@@ -105,7 +115,7 @@ public class SecurityConfig {
                     return;
                 }
             } else {
-                logger.warn("請求缺少 Authorization 頭部: URI={}", httpRequest.getRequestURI());
+                logger.warn("請求缺少 Authorization 頭部: URI={}", requestURI);
             }
             chain.doFilter(request, response);
         }

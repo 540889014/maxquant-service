@@ -54,4 +54,15 @@ public class MarketWebSocketEndpoint extends TextWebSocketHandler {
             }
         }
     }
+
+    public void broadcastDepthData(String symbol, String bids, String asks, long timestamp, String exchange) {
+        try {
+            String message = String.format("{\"type\":\"depth\",\"symbol\":\"%s\",\"bids\":%s,\"asks\":%s,\"timestamp\":%d,\"exchange\":\"%s\"}", 
+                symbol, bids, asks, timestamp, exchange);
+            sendMessage(message);
+            logger.info("深度数据广播成功: symbol={}, exchange={}", symbol, exchange);
+        } catch (Exception e) {
+            logger.error("广播深度数据失败: symbol={}, exchange={}, error={}", symbol, exchange, e.getMessage(), e);
+        }
+    }
 }

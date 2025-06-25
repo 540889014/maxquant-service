@@ -18,6 +18,10 @@ public class CryptoMetadata {
     private String baseCcy;
     private String quoteCcy;
     private String state;
+    private String exchange;
+    private String ctVal;
+    private String ctMult;
+    private String ctValCcy;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -31,4 +35,12 @@ public class CryptoMetadata {
     public void setQuoteCcy(String quoteCcy) { this.quoteCcy = quoteCcy; }
     public String getState() { return state; }
     public void setState(String state) { this.state = state; }
+    public String getExchange() { return exchange; }
+    public void setExchange(String exchange) { this.exchange = exchange; }
+    public String getCtVal() { return ctVal; }
+    public void setCtVal(String ctVal) { this.ctVal = ctVal; }
+    public String getCtMult() { return ctMult; }
+    public void setCtMult(String ctMult) { this.ctMult = ctMult; }
+    public String getCtValCcy() { return ctValCcy; }
+    public void setCtValCcy(String ctValCcy) { this.ctValCcy = ctValCcy; }
 }

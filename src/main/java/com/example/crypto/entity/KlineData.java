@@ -8,7 +8,9 @@ import java.time.LocalDateTime;
  * OHLCデータをデータベースに保存
  */
 @Entity
-@Table(name = "kline_data")
+@Table(name = "kline_data", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"symbol", "timeframe", "timestamp", "exchange"})
+})
 public class KlineData {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY) // 使用自增 ID
@@ -41,6 +43,9 @@ public class KlineData {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Column
+    private String exchange;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getSymbol() { return symbol; }
@@ -61,4 +66,6 @@ public class KlineData {
     public void setVolume(Double volume) { this.volume = volume; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public String getExchange() { return exchange; }
+    public void setExchange(String exchange) { this.exchange = exchange; }
 }

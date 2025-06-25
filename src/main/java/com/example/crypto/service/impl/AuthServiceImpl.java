@@ -31,13 +31,13 @@ public class AuthServiceImpl implements AuthService {
             return userRepository.findByUsername(username)
                 .map(user -> {
                     if (user.getPassword().equals(password)) {
-                        String token = jwtService.generateToken(username);
-                        logger.info("ログイン成功: username={}", username);
-                        return Map.of("token", token);
-                    } else {
-                        logger.warn("ログイン失敗: username={}", username);
-                        throw new RuntimeException("Invalid credentials");
-                    }
+                String token = jwtService.generateToken(username);
+                logger.info("ログイン成功: username={}", username);
+                return Map.of("token", token);
+            } else {
+                logger.warn("ログイン失敗: username={}", username);
+                throw new RuntimeException("Invalid credentials");
+            }
                 })
                 .orElseThrow(() -> {
                     logger.warn("ログイン失敗: username={}", username);

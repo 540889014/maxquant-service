@@ -19,6 +19,8 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import com.example.crypto.config.ProxyConfig;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * WebSocketコントローラ
@@ -32,12 +34,15 @@ public class WebSocketController {
     private final OkxService okxService;
     private final ObjectMapper mapper = new ObjectMapper();
     private Session session;
+    private final ProxyConfig proxyConfig;
 
     @Value("${okx.ws-url}")
     private String wsUrl;
 
-    public WebSocketController(OkxService okxService) {
+    @Autowired
+    public WebSocketController(OkxService okxService, ProxyConfig proxyConfig) {
         this.okxService = okxService;
+        this.proxyConfig = proxyConfig;
         logger.info("WebSocketController 構造函數初始化，wsUrl={}", wsUrl);
     }
 
@@ -54,8 +59,12 @@ public class WebSocketController {
             throw new IllegalStateException("WebSocket URL is null or empty");
         }
         try {
-            Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 19250));
-            OkHttpClient client = new OkHttpClient.Builder().build();
+            OkHttpClient.Builder wsBuilder = new OkHttpClient.Builder();
+            if (proxyConfig.isEnabled() && proxyConfig.getHost() != null && proxyConfig.getWsPort() > 0) {
+                Proxy.Type wsType = "socks".equalsIgnoreCase(proxyConfig.getWsType()) ? Proxy.Type.SOCKS : Proxy.Type.HTTP;
+                wsBuilder.proxy(new Proxy(wsType, new InetSocketAddress(proxyConfig.getHost(), proxyConfig.getWsPort())));
+            }
+            OkHttpClient client = wsBuilder.build();
             Request request = new Request.Builder().url(wsUrl).build();
             client.newWebSocket(request, new WebSocketListener() {
                 @Override
@@ -92,9 +101,14 @@ public class WebSocketController {
         this.session = session;
         logger.info("WebSocket接続確立: sessionId={}", session.getId());
         try {
-            // WebSocketクライアント初期化
-            Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 19250));
-            // ... existing code ...
+            // WebSocketクライアント初期化（如需用到代理，使用ProxyConfig参数）
+            if (proxyConfig.isEnabled() && proxyConfig.getHost() != null && proxyConfig.getWsPort() > 0) {
+                Proxy.Type wsType = "socks".equalsIgnoreCase(proxyConfig.getWsType()) ? Proxy.Type.SOCKS : Proxy.Type.HTTP;
+                Proxy proxy = new Proxy(wsType, new InetSocketAddress(proxyConfig.getHost(), proxyConfig.getWsPort()));
+                // ... 使用 proxy 进行后续操作 ...
+            } else {
+                // ... 不使用代理的逻辑 ...
+            }
         } catch (Exception e) {
             logger.error("WebSocketクライアント初期化失敗: error={}", e.getMessage(), e);
         }

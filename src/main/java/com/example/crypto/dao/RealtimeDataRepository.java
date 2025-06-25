@@ -10,4 +10,5 @@ import java.util.Optional;
  */
 public interface RealtimeDataRepository extends JpaRepository<RealtimeData, String> {
     Optional<RealtimeData> findTopBySymbolOrderByTimestampDesc(String symbol);
+    Optional<RealtimeData> findTopBySymbolAndExchangeOrderByTimestampDesc(String symbol, String exchange);
 }

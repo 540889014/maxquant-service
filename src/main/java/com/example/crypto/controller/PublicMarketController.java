@@ -23,14 +23,14 @@ public class PublicMarketController {
     }
 
     @GetMapping("/instruments")
-    public List<CryptoMetadata> getInstruments(@RequestParam(required = false) String instType) {
-        logger.info("公開契約情報の取得: instType={}", instType);
+    public List<CryptoMetadata> getInstruments(@RequestParam(required = false) String instType, @RequestParam(required = false) String exchange) {
+        logger.info("公開契約情報の取得: instType={}, exchange={}", instType, exchange);
         try {
-            List<CryptoMetadata> instruments = marketService.getInstruments(instType);
+            List<CryptoMetadata> instruments = marketService.getInstruments(instType, exchange);
             logger.debug("公開契約情報取得成功: {} 件", instruments.size());
             return instruments;
         } catch (Exception e) {
-            logger.error("公開契約情報の取得に失敗: instType={}, error={}", instType, e.getMessage(), e);
+            logger.error("公開契約情報の取得に失敗: instType={}, exchange={}, error={}", instType, exchange, e.getMessage(), e);
             throw new RuntimeException("Failed to get instruments", e);
         }
     }

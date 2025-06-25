@@ -10,4 +10,5 @@ import java.util.Optional;
  */
 public interface DepthDataRepository extends JpaRepository<DepthData, String> {
     Optional<DepthData> findTopBySymbolOrderByTimestampDesc(String symbol);
+    Optional<DepthData> findTopBySymbolAndExchangeOrderByTimestampDesc(String symbol, String exchange);
 }

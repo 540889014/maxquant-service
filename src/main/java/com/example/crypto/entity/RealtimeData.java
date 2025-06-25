@@ -18,6 +18,7 @@ public class RealtimeData {
     private Double price;
     private Long timestamp;
     private LocalDateTime createdAt;
+    private String exchange;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -29,4 +30,6 @@ public class RealtimeData {
     public void setTimestamp(Long timestamp) { this.timestamp = timestamp; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public String getExchange() { return exchange; }
+    public void setExchange(String exchange) { this.exchange = exchange; }
 }
