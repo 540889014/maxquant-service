@@ -205,6 +205,7 @@ public class OkxServiceImpl implements OkxService {
                     metadata.setInstId(node.get("instId").asText());
                     metadata.setBaseCcy(node.get("baseCcy").asText());
                     metadata.setQuoteCcy(node.get("quoteCcy").asText());
+                    metadata.setSettleCcy(node.get("settleCcy").asText());
                     metadata.setState(node.get("state").asText());
                     metadata.setExchange("okx");
                     metadata.setCtVal(node.has("ctVal") ? node.get("ctVal").asText() : null);
@@ -239,6 +240,7 @@ public class OkxServiceImpl implements OkxService {
                 metadata.setInstType(node.get("instType").asText());
                 metadata.setInstId(node.get("instId").asText());
                 metadata.setBaseCcy(node.get("baseCcy").asText());
+                metadata.setSettleCcy(node.get("settleCcy").asText());
                 metadata.setQuoteCcy(node.get("quoteCcy").asText());
                 metadata.setState(node.get("state").asText());
                 metadata.setExchange("okx");

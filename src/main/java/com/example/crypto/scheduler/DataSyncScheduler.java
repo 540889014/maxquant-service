@@ -24,7 +24,6 @@ public class DataSyncScheduler {
         logger.info("データ同期タスクを開始");
         try {
             okxService.syncInstruments();
-            okxService.syncKlineData("BTC-USDC", "1h");
             logger.info("データ同期タスクが正常に完了");
         } catch (Exception e) {
             logger.error("データ同期タスクに失敗: {}", e.getMessage(), e);

@@ -17,6 +17,7 @@ public class CryptoMetadata {
     private String instId;
     private String baseCcy;
     private String quoteCcy;
+    private String settleCcy;
     private String state;
     private String exchange;
     private String ctVal;
@@ -33,6 +34,8 @@ public class CryptoMetadata {
     public void setBaseCcy(String baseCcy) { this.baseCcy = baseCcy; }
     public String getQuoteCcy() { return quoteCcy; }
     public void setQuoteCcy(String quoteCcy) { this.quoteCcy = quoteCcy; }
+    public String getSettleCcy() { return settleCcy; }
+    public void setSettleCcy(String settleCcy) { this.settleCcy = settleCcy; }
     public String getState() { return state; }
     public void setState(String state) { this.state = state; }
     public String getExchange() { return exchange; }
