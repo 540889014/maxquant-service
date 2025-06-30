@@ -4,10 +4,12 @@ import com.example.crypto.dto.BacktestRequest;
 import com.example.crypto.dto.BacktestRunRequest;
 import com.example.crypto.service.BacktestService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.Optional;
+import com.example.crypto.enums.BacktestStatus;
+import com.example.crypto.events.BacktestCompletionEvent;
 
 @Service
 public class BacktestServiceImpl implements BacktestService {
@@ -38,6 +42,7 @@ public class BacktestServiceImpl implements BacktestService {
     private static final Logger logger = LoggerFactory.getLogger(BacktestServiceImpl.class);
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${backtest.python.executable:python3}")
     private String pythonExecutable;
@@ -45,9 +50,10 @@ public class BacktestServiceImpl implements BacktestService {
     @Value("${backtest.python.runner-script-path:quantlib/backtest_runner.py}")
     private String runnerScriptPath;
 
-    public BacktestServiceImpl(SimpMessagingTemplate messagingTemplate, ObjectMapper objectMapper) {
+    public BacktestServiceImpl(SimpMessagingTemplate messagingTemplate, ObjectMapper objectMapper, ApplicationEventPublisher eventPublisher) {
         this.messagingTemplate = messagingTemplate;
         this.objectMapper = objectMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     @Async
@@ -182,32 +188,19 @@ public class BacktestServiceImpl implements BacktestService {
             if (exitCode != 0) {
                  logger.error("Backtest script for ID {} failed with exit code {}.", backtestId, exitCode);
                  sendMessage(destination, "error", "Backtest script failed with exit code " + exitCode + ".");
+                 eventPublisher.publishEvent(new BacktestCompletionEvent(this, backtestId, BacktestStatus.FAILED));
             } else {
                 sendMessage(destination, "log", "Backtest finished successfully.");
+                eventPublisher.publishEvent(new BacktestCompletionEvent(this, backtestId, BacktestStatus.COMPLETED));
             }
 
         } catch (IOException | InterruptedException e) {
             logger.error("Failed to execute backtest script for ID {}", backtestId, e);
             sendMessage(destination, "error", "Failed to run backtest: " + e.getMessage());
+            eventPublisher.publishEvent(new BacktestCompletionEvent(this, backtestId, BacktestStatus.FAILED));
             Thread.currentThread().interrupt();
         } finally {
-            if (tempScript != null) {
-                try {
-                    Files.delete(tempScript);
-                    logger.info("Deleted temporary script: {}", tempScript.getFileName());
-                } catch (IOException e) {
-                    logger.error("Failed to delete temporary script: {}", tempScript.getFileName(), e);
-                }
-            }
-            if (tempConfig != null) {
-                try {
-                    Files.delete(tempConfig);
-                    logger.info("Deleted temporary config file: {}", tempConfig.getFileName());
-                } catch (IOException e) {
-                    logger.error("Failed to delete temporary config file: {}", tempConfig.getFileName(), e);
-                }
-            }
-            sendMessage(destination, "finished", "Backtest execution completed.");
+            cleanupTemporaryFiles(tempScript, tempConfig);
         }
     }
 
@@ -349,13 +342,16 @@ public class BacktestServiceImpl implements BacktestService {
             if (exitCode != 0) {
                 logger.error("Backtest script for ID {} failed with exit code {}.", backtestId, exitCode);
                 sendMessage(destination, "error", "Backtest script failed with exit code " + exitCode + ".");
+                eventPublisher.publishEvent(new BacktestCompletionEvent(this, backtestId, BacktestStatus.FAILED));
             } else {
                 sendMessage(destination, "log", "Backtest finished successfully.");
+                eventPublisher.publishEvent(new BacktestCompletionEvent(this, backtestId, BacktestStatus.COMPLETED));
             }
 
         } catch (IOException | InterruptedException e) {
             logger.error("Failed to execute backtest script for ID {}", backtestId, e);
             sendMessage(destination, "error", "Failed to run backtest: " + e.getMessage());
+            eventPublisher.publishEvent(new BacktestCompletionEvent(this, backtestId, BacktestStatus.FAILED));
             Thread.currentThread().interrupt();
         } finally {
             if (tempScript != null) {
@@ -373,6 +369,103 @@ public class BacktestServiceImpl implements BacktestService {
                 }
             }
             sendMessage(destination, "finished", "Backtest execution completed.");
+        }
+    }
+
+    @Async
+    @Override
+    public void runBacktest(String backtestId, String paramsJson, String token) {
+        String destination = "/topic/backtest/" + backtestId;
+        Path tempConfig = null;
+        Path tempScript = null;
+        try {
+            // 1. 定位Python启动脚本
+            File launcherFile = new File(runnerScriptPath);
+            if (!launcherFile.exists() || !launcherFile.isFile()) {
+                throw new IOException("Could not find backtest runner script at the configured path: " + runnerScriptPath);
+            }
+            String launcherPath = launcherFile.getAbsolutePath();
+
+            // 2. Parse the incoming JSON
+            Map<String, Object> configMap = objectMapper.readValue(paramsJson, new TypeReference<>() {});
+
+            // 3. If strategy code is provided, save it to a temporary file and update the config
+            if (configMap.containsKey("STRATEGY_CODE")) {
+                String strategyCode = (String) configMap.get("STRATEGY_CODE");
+                if (strategyCode != null && !strategyCode.isEmpty()) {
+                    Path tempDir = Paths.get(System.getProperty("java.io.tmpdir"), "strategies");
+                    Files.createDirectories(tempDir);
+                    tempScript = Files.createTempFile(tempDir, "strategy-" + backtestId, ".py");
+                    Files.writeString(tempScript, strategyCode);
+                    logger.info("Strategy code saved to temporary file: {}", tempScript.toAbsolutePath());
+                    
+                    // Update the map with the new script path
+                    configMap.put("STRATEGY_FILE", tempScript.toAbsolutePath().toString());
+                    configMap.remove("STRATEGY_CODE"); // Clean up the code from config
+                }
+            }
+            
+            // 4. Add/overwrite the token and result ID
+            configMap.put("USER_TOKEN", token);
+            configMap.put("RESULT_ID", backtestId);
+
+            // 5. Write the final config to a temporary file
+            tempConfig = Files.createTempFile("config-" + backtestId, ".json");
+            Files.writeString(tempConfig, objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(configMap));
+            logger.info("Backtest config (with token and result_id) saved to temporary file: {}", tempConfig.toAbsolutePath());
+
+            // 6. 执行命令
+            List<String> command = new ArrayList<>();
+            command.add(pythonExecutable);
+            command.add("-u");
+            command.add(launcherPath);
+            command.add("--config");
+            command.add(tempConfig.toAbsolutePath().toString());
+
+            logger.info("Executing backtest command for ID {}: {}", backtestId, String.join(" ", command));
+            sendMessage(destination, "log", "Backtest starting with launcher script...");
+
+            ProcessBuilder pb = new ProcessBuilder(command);
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    logger.info("[Python Output] {}: {}", backtestId, line);
+                    if (line.startsWith("RESULT:")) {
+                        String jsonOutput = line.substring("RESULT:".length());
+                        sendMessage(destination, "result", jsonOutput);
+                    } else {
+                        sendMessage(destination, "log", line);
+                    }
+                }
+            }
+
+            boolean finished = process.waitFor(10, TimeUnit.MINUTES);
+            if (!finished) {
+                process.destroyForcibly();
+                sendMessage(destination, "error", "Backtest process timed out after 10 minutes.");
+                return;
+            }
+
+            int exitCode = process.exitValue();
+            if (exitCode != 0) {
+                logger.error("Backtest script for ID {} failed with exit code {}.", backtestId, exitCode);
+                sendMessage(destination, "error", "Backtest script failed with exit code " + exitCode + ".");
+                eventPublisher.publishEvent(new BacktestCompletionEvent(this, backtestId, BacktestStatus.FAILED));
+            } else {
+                sendMessage(destination, "log", "Backtest finished successfully.");
+                eventPublisher.publishEvent(new BacktestCompletionEvent(this, backtestId, BacktestStatus.COMPLETED));
+            }
+
+        } catch (IOException | InterruptedException e) {
+            logger.error("Failed to execute backtest script for ID {}", backtestId, e);
+            sendMessage(destination, "error", "Failed to run backtest: " + e.getMessage());
+            eventPublisher.publishEvent(new BacktestCompletionEvent(this, backtestId, BacktestStatus.FAILED));
+            Thread.currentThread().interrupt();
+        } finally {
+            cleanupTemporaryFiles(tempScript, tempConfig);
         }
     }
 
@@ -432,6 +525,25 @@ public class BacktestServiceImpl implements BacktestService {
             messagingTemplate.convertAndSend(destination, objectMapper.writeValueAsString(message));
         } catch (JsonProcessingException e) {
             logger.error("Failed to serialize message for WebSocket", e);
+        }
+    }
+
+    private void cleanupTemporaryFiles(Path scriptFile, Path configFile) {
+        if (scriptFile != null) {
+            try {
+                Files.deleteIfExists(scriptFile);
+                logger.info("Deleted temporary script: {}", scriptFile.getFileName());
+            } catch (IOException e) {
+                logger.error("Failed to delete temporary script: {}", scriptFile.getFileName(), e);
+            }
+        }
+        if (configFile != null) {
+            try {
+                Files.deleteIfExists(configFile);
+                logger.info("Deleted temporary config file: {}", configFile.getFileName());
+            } catch (IOException e) {
+                logger.error("Failed to delete temporary config file: {}", configFile.getFileName(), e);
+            }
         }
     }
 } 
