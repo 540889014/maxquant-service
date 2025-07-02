@@ -1,0 +1,18 @@
+# ===============================================
+# Production Environment Configuration
+# ===============================================
+
+backtest:
+  python:
+    # IMPORTANT: Please change this path to the correct Python executable path
+    # on your production server.
+    # For example: /usr/bin/python3 or /path/to/your/venv/bin/python
+    executable: /usr/bin/python3
+
+# You can also override other settings for production here
+# For example, database settings:
+# spring:
+#   datasource:
+#     url: jdbc:postgresql://production-db-host:5432/quant_data
+#     username: prod_user
+#     password: prod_password 

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Data Service</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="data:,">
+    <script src="/js/vue.min.js"></script>
+    <script src="/js/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.0/dist/chartjs-chart-financial.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/dist/date-fns.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-chartjs@3.5.1/dist/vue-chartjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <style>
+    .tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .tabs button {
+      flex: 1 1 0;
+      padding: 10px 0;
+      border: none;
+      background: #f5f6fa;
+      color: #333;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 6px 6px 0 0;
+      transition: background 0.2s, color 0.2s;
+    }
+    .tabs button.active {
+      background: #2d8cf0;
+      color: #fff;
+    }
+    .input-group {
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .dropdown-list {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      z-index: 10;
+      background: #fff;
+      border: 1px solid #d3d3d3;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      max-height: 220px;
+      overflow-y: auto;
+      margin: 0;
+      padding: 0;
+    }
+    .dropdown-list div {
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 15px;
+      color: #333;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.2s;
+    }
+    .dropdown-list div:last-child {
+      border-bottom: none;
+    }
+    .dropdown-list div:hover {
+      background: #e6f7ff;
+      color: #2d8cf0;
+    }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div v-if="!isLoggedIn">
+        <h1>ログイン</h1>
+        <form @submit.prevent="login">
+            <label>ユーザ名:</label>
+            <input v-model="username" type="text" required>
+            <label>パスワード:</label>
+            <input v-model="password" type="password" required>
+            <button type="submit">ログイン</button>
+            <p v-if="loginError" style="color: red;">{{ loginError }}</p>
+        </form>
+    </div>
+    <div v-else>
+        <h1>暗号資産市場データ</h1>
+        <p><a href="./subscriptions-list.html">查看已訂閱契約</a></p>
+        <p v-if="isAdmin"><a href="/user-management.html">用户管理</a></p>
+        <div class="tabs">
+            <button :class="{active: activeTab==='market'}" @click="setTab('market')">行情数据</button>
+            <button :class="{active: activeTab==='spread'}" @click="setTab('spread')">价差图</button>
+        </div>
+        <div v-if="activeTab==='market'">
+        <div>
+            <label>商品タイプ:</label>
+            <select v-model="selectedInstType" @change="loadInstruments">
+                <option value="SPOT">現物（SPOT）</option>
+                <option value="FUTURES">先物（FUTURES）</option>
+                <option value="SWAP">永久契約（SWAP）</option>
+                <option value="OPTION">オプション（OPTION）</option>
+            </select>
+        </div>
+            <div class="input-group">
+                <label>契約検索/選択:</label>
+                <input v-model="searchQuery" type="text" placeholder="契約を検索（例: BTC）" @input="filterInstruments" @focus="showDropdown=true" autocomplete="off">
+                <ul v-if="showDropdown && filteredInstruments.length" class="dropdown-list">
+                    <li v-for="inst in filteredInstruments" :key="inst.instId" @click="selectInstrument(inst)">{{ inst.instId }}</li>
+                </ul>
+        </div>
+        <div>
+                <label>数据类型:</label>
+            <select v-model="dataType" @change="loadData">
+                <option value="realtime">リアルタイム</option>
+                <option value="ohlc">OHLC</option>
+                <option value="depth">深度</option>
+            </select>
+        </div>
+        <div v-if="dataType === 'ohlc'">
+            <label>時間枠:</label>
+            <select v-model="timeframe" @change="loadData">
+                <option value="1m">1分</option>
+                <option value="5m">5分</option>
+                <option value="15m">15分</option>
+                <option value="1h">1時間</option>
+                <option value="4h">4時間</option>
+                <option value="12h">12時間</option>
+                <option value="1d">1日</option>
+            </select>
+        </div>
+        <div>
+                <button class="small-btn" @click="subscribeMarket" :disabled="!selectedSymbol || !dataType">訂閱行情</button>
+            <p v-if="subscriptionStatus" style="color: green;">{{ subscriptionStatus }}</p>
+        </div>
+        <div>
+            <h2>データ表示</h2>
+            <table v-if="dataType === 'realtime' || dataType === 'ohlc'">
+                <thead>
+                <tr>
+                    <th>シンボル</th>
+                    <th v-if="dataType === 'realtime'">価格</th>
+                    <th v-else>オープン</th>
+                    <th v-if="dataType === 'ohlc'">ハイ</th>
+                    <th v-if="dataType === 'ohlc'">ロー</th>
+                    <th v-if="dataType === 'ohlc'">クローズ</th>
+                    <th>タイムスタンプ</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="item in displayData" :key="item.id">
+                    <td>{{ item.symbol }}</td>
+                    <td v-if="dataType === 'realtime'">{{ item.price }}</td>
+                    <td v-else>{{ item.openPrice }}</td>
+                    <td v-if="dataType === 'ohlc'">{{ item.highPrice }}</td>
+                    <td v-if="dataType === 'ohlc'">{{ item.lowPrice }}</td>
+                    <td v-if="dataType === 'ohlc'">{{ item.closePrice }}</td>
+                    <td>{{ new Date(item.timestamp).toLocaleString() }}</td>
+                </tr>
+                </tbody>
+            </table>
+            <div v-if="dataType === 'depth'">
+                <h3>買い注文</h3>
+                <table>
+                    <thead>
+                    <tr>
+                        <th>価格</th>
+                        <th>数量</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="bid in depthData.bids" :key="bid[0]">
+                        <td>{{ bid[0] }}</td>
+                        <td>{{ bid[1] }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+                <h3>売り注文</h3>
+                <table>
+                    <thead>
+                    <tr>
+                        <th>価格</th>
+                        <th>数量</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="ask in depthData.asks" :key="ask[0]">
+                        <td>{{ ask[0] }}</td>
+                        <td>{{ ask[1] }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div v-if="dataType === 'ohlc'">
+            <h2>K線チャート</h2>
+                <div id="klineChart"></div>
+            </div>
+        </div>
+        <div v-if="activeTab==='spread'">
+            <div class="input-group">
+                <label>合约1：</label>
+                <input type="text" v-model="input1" @input="onInput1" @focus="showDropdown1=true" autocomplete="off">
+                <div v-if="showDropdown1 && filtered1.length" class="dropdown-list">
+                    <div v-for="item in filtered1" :key="item.instId" @click="select1(item)">{{ item.instId }}</div>
+                </div>
+            </div>
+            <div class="input-group">
+                <label>合约2：</label>
+                <input type="text" v-model="input2" @input="onInput2" @focus="showDropdown2=true" autocomplete="off">
+                <div v-if="showDropdown2 && filtered2.length" class="dropdown-list">
+                    <div v-for="item in filtered2" :key="item.instId" @click="select2(item)">{{ item.instId }}</div>
+                </div>
+            </div>
+            <div>
+                <label>数据类型：</label>
+                <select v-model="spreadDataType">
+                    <option value="ohlc">OHLC</option>
+                    <option value="depth">深度</option>
+                </select>
+            </div>
+            <div v-if="spreadDataType==='ohlc'">
+                <label>时间粒度：</label>
+                <select v-model="spreadTimeframe">
+                    <option value="1m">1分</option>
+                    <option value="5m">5分</option>
+                    <option value="15m">15分</option>
+                    <option value="1h">1小时</option>
+                    <option value="4h">4小时</option>
+                    <option value="12h">12小时</option>
+                    <option value="1d">1天</option>
+                </select>
+            </div>
+            <div class="input-group" style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <label style="margin-bottom:0;">布林线周期:</label>
+                <input type="number" v-model.number="bollPeriod" min="2" max="200" style="width:100px;">
+                <label style="margin-bottom:0;">倍数:</label>
+                <input type="number" v-model.number="bollStd" min="0.1" step="0.1" max="10" style="width:100px;">
+                <button @click="updateBollinger" style="width:auto;padding:8px 20px;">更新布林线</button>
+            </div>
+            <button @click="calculateSpread" :disabled="!selected1 || !selected2">计算价差曲线</button>
+            <div id="spreadChart" style="margin-top:40px;"></div>
+            <div v-if="spreadTabError" style="color:red;">{{ spreadTabError }}</div>
+        </div>
+    </div>
+</div>
+<script src="/js/app.js"></script>
+</body>
+</html>
