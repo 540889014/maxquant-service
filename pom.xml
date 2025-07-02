@@ -9,10 +9,10 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>crypto-data-model</module>
-        <module>crypto-data-dao</module>
-        <module>crypto-data-service</module>
-        <module>crypto-data-app</module>
+        <module>maxquant-service-model</module>
+        <module>maxquant-service-dao</module>
+        <module>maxquant-service-service</module>
+        <module>maxquant-service-app</module>
     </modules>
 
     <parent>
@@ -74,11 +74,13 @@
     </dependencyManagement>
 
     <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-        </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 </project>

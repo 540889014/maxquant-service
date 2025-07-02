@@ -9,12 +9,12 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>crypto-data-app</artifactId>
+    <artifactId>maxquant-service-app</artifactId>
 
     <dependencies>
         <dependency>
             <groupId>com.example</groupId>
-            <artifactId>crypto-data-service</artifactId>
+            <artifactId>maxquant-service-service</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

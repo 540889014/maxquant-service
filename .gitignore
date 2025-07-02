@@ -1,5 +1,6 @@
 target/
 *.log
+logs
 .idea
 
 # Configuration file with secrets

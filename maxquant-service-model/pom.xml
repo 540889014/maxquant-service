@@ -9,7 +9,7 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>crypto-data-model</artifactId>
+    <artifactId>maxquant-service-model</artifactId>
 
     <dependencies>
         <dependency>

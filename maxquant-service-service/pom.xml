@@ -9,18 +9,18 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>crypto-data-service</artifactId>
+    <artifactId>maxquant-service-service</artifactId>
     <packaging>jar</packaging>
 
     <dependencies>
         <dependency>
             <groupId>com.example</groupId>
-            <artifactId>crypto-data-dao</artifactId>
+            <artifactId>maxquant-service-dao</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.example</groupId>
-            <artifactId>crypto-data-model</artifactId>
+            <artifactId>maxquant-service-model</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
