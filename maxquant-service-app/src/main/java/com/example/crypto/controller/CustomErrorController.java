@@ -1,17 +1,14 @@
 package com.example.crypto.controller;
 
+import com.example.crypto.models.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.web.servlet.error.ErrorController;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import jakarta.servlet.http.HttpServletRequest;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * カスタムエラーコントローラ
@@ -22,45 +19,45 @@ public class CustomErrorController implements ErrorController {
     private static final Logger logger = LoggerFactory.getLogger(CustomErrorController.class);
 
     @RequestMapping("/error")
-    public ResponseEntity<Map<String, Object>> handleError(HttpServletRequest request) {
-        Integer statusCode = (Integer) request.getAttribute("javax.servlet.error.status_code");
-        String requestUri = (String) request.getAttribute("javax.servlet.error.request_uri");
-        String message = (String) request.getAttribute("javax.servlet.error.message");
-        Throwable throwable = (Throwable) request.getAttribute("javax.servlet.error.exception");
+    public ApiResponse<Void> handleError(HttpServletRequest request, HttpServletResponse response) {
+        Integer statusCode = (Integer) request.getAttribute("jakarta.servlet.error.status_code");
+        String requestUri = (String) request.getAttribute("jakarta.servlet.error.request_uri");
+        Throwable throwable = (Throwable) request.getAttribute("jakarta.servlet.error.exception");
+        String message = (throwable != null) ? throwable.getMessage() : (String) request.getAttribute("jakarta.servlet.error.message");
 
-        Map<String, Object> errorDetails = new HashMap<>();
-        errorDetails.put("status", statusCode != null ? statusCode : HttpStatus.INTERNAL_SERVER_ERROR.value());
-        errorDetails.put("path", requestUri != null ? requestUri : "不明");
-        errorDetails.put("message", message != null ? message : "不明なエラー");
-
-        if (throwable != null) {
-            errorDetails.put("exception", throwable.getClass().getName());
-            errorDetails.put("exceptionMessage", throwable.getMessage());
-            logger.error("エラー発生: statusCode={}, requestUri={}, message={}, exception={}", statusCode, requestUri, message, throwable.getMessage(), throwable);
-        } else {
-            logger.error("エラー発生: statusCode={}, requestUri={}, message={}", statusCode, requestUri, message);
+        if (statusCode == null) {
+            statusCode = HttpStatus.INTERNAL_SERVER_ERROR.value();
         }
 
-        if (statusCode != null) {
-            if (statusCode == 403) {
-                errorDetails.put("error", "アクセスが拒否されました");
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorDetails);
-            } else if (statusCode == 401) {
-                try {
-                    jakarta.servlet.http.HttpServletResponse httpResponse = (jakarta.servlet.http.HttpServletResponse) request;
-                    httpResponse.sendRedirect("/index.html");
-                    return null;
-                } catch (Exception e) {
-                    logger.error("リダイレクトエラー: {}", e.getMessage(), e);
-                errorDetails.put("error", "認証が必要です");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorDetails);
-                }
-            } else if (statusCode == 500) {
-                errorDetails.put("error", "サーバーエラー");
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorDetails);
+        response.setStatus(statusCode);
+
+        // Log the error
+        if (throwable != null) {
+            logger.error("Error occurred: status={}, uri={}, message={}", statusCode, requestUri, message, throwable);
+        } else {
+            logger.error("Error occurred: status={}, uri={}, message={}", statusCode, requestUri, message);
+        }
+        
+        // Don't redirect for API calls, just return the structured error
+        if (requestUri != null && requestUri.startsWith("/api/")) {
+             return ApiResponse.fail(statusCode, message);
+        }
+        
+        // Redirect for 401 on non-api routes
+        if (statusCode == HttpStatus.UNAUTHORIZED.value()) {
+            try {
+                response.sendRedirect("/index.html");
+                // Returning null because the response is already handled by the redirect.
+                return null; 
+            } catch (Exception e) {
+                logger.error("Redirect failed for 401 error: {}", e.getMessage(), e);
+                // Fallback to returning an error response
+                return ApiResponse.fail(statusCode, "Authentication required, redirect failed.");
             }
         }
-        errorDetails.put("error", "不明なエラー");
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorDetails);
+        
+        // For other errors on non-api routes, you might still want to return a JSON error
+        // or redirect to a generic error page. Returning JSON here for consistency.
+        return ApiResponse.fail(statusCode, message != null ? message : "An unexpected error occurred.");
     }
 }

@@ -2,12 +2,11 @@ package com.example.crypto.controller;
 
 import com.example.crypto.entity.Subscription;
 import com.example.crypto.enums.AssetType;
-import com.example.crypto.service.SubscriptionService;
+import com.example.crypto.models.ApiResponse;
 import com.example.crypto.service.OkxService;
+import com.example.crypto.service.SubscriptionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,7 +28,7 @@ public class SubscriptionController {
     }
 
     @PostMapping("/subscribe")
-    public ResponseEntity<?> subscribe(
+    public ApiResponse<Subscription> subscribe(
             @RequestParam String username,
             @RequestParam String symbol,
             @RequestParam String dataType,
@@ -39,87 +38,88 @@ public class SubscriptionController {
             @RequestParam AssetType assetType
     ) {
         logger.info("訂閱リクエスト: username={}, symbol={}, dataType={}, instType={}, timeframe={}, exchange={}, assetType={}", username, symbol, dataType, instType, timeframe, exchange, assetType);
-        try {
-            if (username == null || username.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("ユーザ名が必要です");
-            }
-            if (symbol == null || symbol.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("契約が必要です");
-            }
-            if (dataType == null || dataType.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("データタイプが必要です");
-            }
-            if (instType == null || instType.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("契約タイプが必要です");
-            }
-            if (assetType != AssetType.FOREX && (exchange == null || exchange.trim().isEmpty())) {
-                return ResponseEntity.badRequest().body("交易所(exchange)が必要です");
-            }
-            if (dataType.equals("ohlc") && (timeframe == null || timeframe.trim().isEmpty())) {
-                return ResponseEntity.badRequest().body("OHLC データには時間枠が必要です");
-            }
+        if (username == null || username.trim().isEmpty()) {
+            return ApiResponse.fail(400, "ユーザ名が必要です");
+        }
+        if (symbol == null || symbol.trim().isEmpty()) {
+            return ApiResponse.fail(400, "契約が必要です");
+        }
+        if (dataType == null || dataType.trim().isEmpty()) {
+            return ApiResponse.fail(400, "データタイプが必要です");
+        }
+        if (instType == null || instType.trim().isEmpty()) {
+            return ApiResponse.fail(400, "契約タイプが必要です");
+        }
+        if (assetType != AssetType.FOREX && (exchange == null || exchange.trim().isEmpty())) {
+            return ApiResponse.fail(400, "交易所(exchange)が必要です");
+        }
+        if (dataType.equals("ohlc") && (timeframe == null || timeframe.trim().isEmpty())) {
+            return ApiResponse.fail(400, "OHLC データには時間枠が必要です");
+        }
 
+        try {
             Subscription subscription = subscriptionService.subscribe(username, symbol, dataType, instType, timeframe, exchange, assetType);
             if ("depth".equals(dataType)) {
                 okxService.updateDepthSubscriptions();
             }
-            return ResponseEntity.ok(subscription);
+            return ApiResponse.ok(subscription);
         } catch (Exception e) {
             logger.error("訂閱リクエスト処理に失敗: username={}, error={}", username, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("訂閱失敗: " + e.getMessage());
+            return ApiResponse.fail(500, "訂閱失敗: " + e.getMessage());
         }
     }
 
     @PostMapping("/unsubscribe")
-    public ResponseEntity<?> unsubscribe(
+    public ApiResponse<String> unsubscribe(
             @RequestParam String username,
             @RequestParam String symbol,
             @RequestParam String dataType,
             @RequestParam String exchange
     ) {
         logger.info("取消訂閱リクエスト: username={}, symbol={}, dataType={}, exchange={}", username, symbol, dataType, exchange);
+        if (username == null || username.trim().isEmpty()) {
+            return ApiResponse.fail(400, "ユーザ名が必要です");
+        }
+        if (symbol == null || symbol.trim().isEmpty()) {
+            return ApiResponse.fail(400, "契約が必要です");
+        }
+        if (dataType == null || dataType.trim().isEmpty()) {
+            return ApiResponse.fail(400, "データタイプが必要です");
+        }
+        if (exchange == null || exchange.trim().isEmpty()) {
+            return ApiResponse.fail(400, "交易所(exchange)が必要です");
+        }
+
         try {
-            if (username == null || username.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("ユーザ名が必要です");
-            }
-            if (symbol == null || symbol.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("契約が必要です");
-            }
-            if (dataType == null || dataType.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("データタイプが必要です");
-            }
-            if (exchange == null || exchange.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("交易所(exchange)が必要です");
-            }
             subscriptionService.unsubscribe(username, symbol, dataType, exchange);
             // 若為深度數據，更新 WebSocket 訂閱
             if ("depth".equals(dataType)) {
                 okxService.updateDepthSubscriptions();
             }
-            return ResponseEntity.ok("取消訂閱成功");
+            return ApiResponse.ok("取消訂閱成功");
         } catch (Exception e) {
             logger.error("取消訂閱リクエスト処理に失敗: username={}, symbol={}, dataType={}, exchange={}, error={}", username, symbol, dataType, exchange, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("取消訂閱失敗: " + e.getMessage());
+            return ApiResponse.fail(500, "取消訂閱失敗: " + e.getMessage());
         }
     }
 
     @GetMapping("/user")
-    public ResponseEntity<List<Subscription>> getSubscriptionsByUsername(
+    public ApiResponse<List<Subscription>> getSubscriptionsByUsername(
             @RequestParam String username,
             @RequestParam(required = false) AssetType assetType
     ) {
         if (assetType == null) {
-            return ResponseEntity.ok(subscriptionService.getSubscriptionsByUsername(username));
+            return ApiResponse.ok(subscriptionService.getSubscriptionsByUsername(username));
         } else {
-            return ResponseEntity.ok(subscriptionService.getSubscriptionsByUsernameAndAssetType(username, assetType));
+            return ApiResponse.ok(subscriptionService.getSubscriptionsByUsernameAndAssetType(username, assetType));
         }
     }
 
     @GetMapping("/type")
-    public ResponseEntity<List<Subscription>> getSubscriptionsByDataType(
+    public ApiResponse<List<Subscription>> getSubscriptionsByDataType(
             @RequestParam String dataType,
             @RequestParam String exchange
     ) {
-        return ResponseEntity.ok(subscriptionService.getSubscriptionsByDataTypeAndExchange(dataType, exchange));
+        return ApiResponse.ok(subscriptionService.getSubscriptionsByDataTypeAndExchange(dataType, exchange));
     }
 }

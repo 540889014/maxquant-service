@@ -1,6 +1,7 @@
 package com.example.crypto.controller;
 
 import com.example.crypto.entity.CryptoMetadata;
+import com.example.crypto.models.ApiResponse;
 import com.example.crypto.service.MarketService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,15 +24,15 @@ public class PublicMarketController {
     }
 
     @GetMapping("/instruments")
-    public List<CryptoMetadata> getInstruments(@RequestParam(required = false) String instType, @RequestParam(required = false) String exchange) {
+    public ApiResponse<List<CryptoMetadata>> getInstruments(@RequestParam(required = false) String instType, @RequestParam(required = false) String exchange) {
         logger.info("公開契約情報の取得: instType={}, exchange={}", instType, exchange);
         try {
             List<CryptoMetadata> instruments = marketService.getInstruments(instType, exchange);
             logger.debug("公開契約情報取得成功: {} 件", instruments.size());
-            return instruments;
+            return ApiResponse.ok(instruments);
         } catch (Exception e) {
             logger.error("公開契約情報の取得に失敗: instType={}, exchange={}, error={}", instType, exchange, e.getMessage(), e);
-            throw new RuntimeException("Failed to get instruments", e);
+            return ApiResponse.fail(500, "Failed to get instruments: " + e.getMessage());
         }
     }
 }

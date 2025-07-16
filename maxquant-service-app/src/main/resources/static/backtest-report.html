@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>回测报告</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/js/vue.min.js"></script>
+    <script src="/js/axios.min.js"></script>
+    <script src="/js/chart.min.js"></script>
+    <script src="/js/vue-chartjs.min.js"></script>
+</head>
+<body>
+<div id="backtest-report-app">
+    <h1>回测报告: {{ strategyName }} - {{ timestamp }}</h1>
+
+    <div class="container">
+        <h2>整体性能</h2>
+        <div id="performance-metrics" class="metrics-grid">
+            <div v-for="(value, key) in performance" class="metric-item">
+                <strong>{{ key }}:</strong> {{ value }}
+            </div>
+        </div>
+
+        <h2>资产净值曲线</h2>
+        <div id="portfolio-chart-container" style="height: 400px">
+            <line-chart v-if="chartData" :chartdata="chartData" :options="chartOptions"></line-chart>
+        </div>
+
+        <h2>订单列表</h2>
+        <table id="orders-table">
+            <thead>
+                <tr>
+                    <th v-for="(value, key) in (orders[0] || {})">{{ key }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="order in orders">
+                    <td v-for="value in order">{{ value }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>交易记录</h2>
+        <table id="trades-table">
+            <thead>
+                <tr>
+                    <th v-for="(value, key) in (trades[0] || {})">{{ key }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="trade in trades">
+                    <td v-for="value in trade">{{ value }}</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h2>周期性表现</h2>
+        <table id="periodic-performance-table">
+            <thead>
+                <tr>
+                    <th v-for="(value, key) in (periodicPerformance[0] || {})">{{ key }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="item in periodicPerformance">
+                    <td v-for="value in item">{{ value }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>每日指标</h2>
+        <table id="daily-indicators-table">
+            <thead>
+                <tr>
+                    <th v-for="(value, key) in (dailyIndicators[0] || {})">{{ key }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="item in dailyIndicators">
+                    <td v-for="value in item">{{ value }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+    </div>
+</div>
+<script src="/js/backtest-report.js"></script>
+</body>
+</html> 

@@ -3,13 +3,12 @@ package com.example.crypto.controller;
 import com.example.crypto.dto.BacktestInstanceDto;
 import com.example.crypto.dto.CreateBacktestInstanceRequest;
 import com.example.crypto.dto.UpdateBacktestInstanceRequest;
+import com.example.crypto.models.ApiResponse;
 import com.example.crypto.service.BacktestInstanceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,38 +19,44 @@ public class BacktestInstanceController {
     private final BacktestInstanceService backtestInstanceService;
 
     @PostMapping
-    public ResponseEntity<BacktestInstanceDto> createInstance(@Valid @RequestBody CreateBacktestInstanceRequest request) {
+    public ApiResponse<BacktestInstanceDto> createInstance(@Valid @RequestBody CreateBacktestInstanceRequest request) {
         BacktestInstanceDto createdInstance = backtestInstanceService.createInstance(request);
-        return new ResponseEntity<>(createdInstance, HttpStatus.CREATED);
+        return ApiResponse.ok(createdInstance);
     }
 
     @GetMapping
-    public ResponseEntity<Page<BacktestInstanceDto>> getInstances(Pageable pageable) {
+    public ApiResponse<Page<BacktestInstanceDto>> getInstances(Pageable pageable) {
         Page<BacktestInstanceDto> instances = backtestInstanceService.getInstances(pageable);
-        return ResponseEntity.ok(instances);
+        return ApiResponse.ok(instances);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BacktestInstanceDto> getInstanceById(@PathVariable Long id) {
+    public ApiResponse<BacktestInstanceDto> getInstanceById(@PathVariable Long id) {
         BacktestInstanceDto instance = backtestInstanceService.getInstanceById(id);
-        return ResponseEntity.ok(instance);
+        return ApiResponse.ok(instance);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BacktestInstanceDto> updateInstance(@PathVariable Long id, @RequestBody UpdateBacktestInstanceRequest request) {
+    public ApiResponse<BacktestInstanceDto> updateInstance(@PathVariable Long id, @RequestBody UpdateBacktestInstanceRequest request) {
         BacktestInstanceDto updatedInstance = backtestInstanceService.updateInstance(id, request);
-        return ResponseEntity.ok(updatedInstance);
+        return ApiResponse.ok(updatedInstance);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteInstance(@PathVariable Long id) {
-        backtestInstanceService.deleteInstance(id);
-        return ResponseEntity.noContent().build();
+    public ApiResponse<Void> deleteInstance(@PathVariable Long id) {
+        try {
+            backtestInstanceService.deleteInstance(id);
+            return ApiResponse.ok();
+        } catch (java.io.IOException e) {
+            // Log the exception (optional, but recommended)
+            System.err.println("Failed to delete backtest reports for instance " + id + ": " + e.getMessage());
+            return ApiResponse.fail(500, "Failed to delete instance and its reports: " + e.getMessage());
+        }
     }
 
     @PostMapping("/{id}/run")
-    public ResponseEntity<BacktestInstanceDto> runInstance(@PathVariable Long id, @RequestHeader("Authorization") String authorizationHeader) {
+    public ApiResponse<BacktestInstanceDto> runInstance(@PathVariable Long id, @RequestHeader("Authorization") String authorizationHeader) {
         BacktestInstanceDto runningInstance = backtestInstanceService.runInstance(id, authorizationHeader);
-        return ResponseEntity.ok(runningInstance);
+        return ApiResponse.ok(runningInstance);
     }
 } 

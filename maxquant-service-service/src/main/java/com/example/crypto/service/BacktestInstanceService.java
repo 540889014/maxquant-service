@@ -21,6 +21,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 
@@ -30,6 +31,7 @@ public class BacktestInstanceService {
 
     private final BacktestInstanceRepository backtestInstanceRepository;
     private final BacktestService backtestService;
+    private final BacktestReportService backtestReportService;
     private final StrategyTemplateRepository strategyTemplateRepository;
     private final ObjectMapper objectMapper;
 
@@ -89,9 +91,16 @@ public class BacktestInstanceService {
     }
 
     @Transactional
-    public void deleteInstance(Long id) {
+    public void deleteInstance(Long id) throws IOException {
         BacktestInstance instance = findInstanceById(id);
         checkAccess(instance);
+
+        // First, delete the associated report files.
+        // If this fails, it will throw an IOException and the transaction will be rolled back.
+        //backtestInstance_{id} 是固定的写法
+        backtestReportService.deleteBacktestReportsByStrategyName("backtestInstance_"+id);
+
+        // If report deletion is successful, delete the instance from the database.
         backtestInstanceRepository.delete(instance);
     }
 

@@ -1,11 +1,11 @@
 package com.example.crypto.controller;
 
 import com.example.crypto.dto.BacktestRunRequest;
+import com.example.crypto.models.ApiResponse;
 import com.example.crypto.service.BacktestService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.UUID;
@@ -22,7 +22,7 @@ public class BacktestController {
     }
 
     @PostMapping("/run")
-    public ResponseEntity<?> runBacktest(@RequestBody BacktestRunRequest request, @RequestHeader("Authorization") String authorizationHeader) {
+    public ApiResponse<Map<String, String>> runBacktest(@RequestBody BacktestRunRequest request, @RequestHeader("Authorization") String authorizationHeader) {
         try {
             String backtestId = UUID.randomUUID().toString();
             logger.info("Received backtest request, assigning ID: {}", backtestId);
@@ -32,10 +32,10 @@ public class BacktestController {
             String token = authorizationHeader.replace("Bearer ", "");
 
             backtestService.runBacktest(backtestId, request, token);
-            return ResponseEntity.ok(Map.of("backtestId", backtestId));
+            return ApiResponse.ok(Map.of("backtestId", backtestId));
         } catch (Exception e) {
             logger.error("Error initiating backtest", e);
-            return ResponseEntity.badRequest().body("{\"error\": \"" + e.getMessage() + "\"}");
+            return ApiResponse.fail(400, "Error initiating backtest: " + e.getMessage());
         }
     }
 } 

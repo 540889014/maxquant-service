@@ -350,7 +350,6 @@ public class OkxServiceImpl implements OkxService {
                 wsBuilder.proxy(new Proxy(wsType, new InetSocketAddress(proxyConfig.getHost(), proxyConfig.getWsPort())));
             }
             OkHttpClient wsClient = wsBuilder
-                    .pingInterval(20, TimeUnit.SECONDS)
                     .readTimeout(0, TimeUnit.MILLISECONDS)
                     .build();
             Request request = new Request.Builder().url(wsUrl).build();

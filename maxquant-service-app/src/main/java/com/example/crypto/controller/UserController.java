@@ -1,12 +1,13 @@
 package com.example.crypto.controller;
 
 import com.example.crypto.entity.User;
+import com.example.crypto.models.ApiResponse;
 import com.example.crypto.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 /**
@@ -22,30 +23,30 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/add")
-    public ResponseEntity<User> addUser(@RequestParam String username, @RequestParam String password, @RequestParam String role) {
+    public ApiResponse<User> addUser(@RequestParam String username, @RequestParam String password, @RequestParam String role) {
         logger.debug("添加用户请求: username={}, role={}", username, role);
         User user = userService.addUser(username, password, role);
-        return ResponseEntity.ok(user);
+        return ApiResponse.ok(user);
     }
 
     @DeleteMapping("/delete/{userId}")
-    public ResponseEntity<String> deleteUser(@PathVariable Long userId) {
+    public ApiResponse<String> deleteUser(@PathVariable Long userId) {
         logger.debug("删除用户请求: userId={}", userId);
         userService.deleteUser(userId);
-        return ResponseEntity.ok("User deleted successfully");
+        return ApiResponse.ok("User deleted successfully");
     }
 
     @PutMapping("/update-password/{userId}")
-    public ResponseEntity<User> updateUserPassword(@PathVariable Long userId, @RequestParam String newPassword) {
+    public ApiResponse<User> updateUserPassword(@PathVariable Long userId, @RequestParam String newPassword) {
         logger.debug("修改用户密码请求: userId={}", userId);
         User user = userService.updateUserPassword(userId, newPassword);
-        return ResponseEntity.ok(user);
+        return ApiResponse.ok(user);
     }
 
     @GetMapping("/all")
-    public ResponseEntity<List<User>> getAllUsers() {
+    public ApiResponse<List<User>> getAllUsers() {
         logger.debug("获取所有用户请求");
         List<User> users = userService.getAllUsers();
-        return ResponseEntity.ok(users);
+        return ApiResponse.ok(users);
     }
 } 
