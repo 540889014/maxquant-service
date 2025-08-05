@@ -1,3 +1,141 @@
+# MaxQuant 服务（主要用于加密资产数据服务）
+
+这是一个用于加密资产数据分析和回测的开源项目，基于 Spring Boot 开发。
+
+## 1. 项目功能（主要功能）
+通过本服务，您可以实现以下功能：
+
+### 市场数据获取
+- 支持通过 API 获取 K 线数据（即“K线图”或“蜡烛图”）、实时价格数据、订单簿信息等。
+
+### 回测功能
+- 使用历史数据测试您设计的投资策略是否有效。
+- 支持创建回测实例、查看回测报告以及删除不再需要的实例。
+
+### 用户管理
+- 支持创建用户、修改密码等操作。
+
+### 策略模板管理
+- 允许保存和加载用于回测的策略模板。
+
+### 统计分析工具
+- 提供简单易用的 API，支持 ADF 检验、Hurst 指数等专业统计分析。
+
+### 数据同步
+- 支持从 OKX、Binance 等外部交易所自动获取数据。
+
+## 2. 使用技术
+- **后端**：Java 17, Spring Boot 3
+- **数据库**：
+  - **PostgreSQL**：用于存储用户信息、策略模板等。
+  - **ClickHouse**：用于快速分析 K 线等大规模数据。
+- **构建工具**：Maven
+- **其他**：WebSocket
+
+## 3. 运行项目的需求
+请确保您的计算机已安装以下软件：
+- Java (JDK) 17 或更高版本
+- Maven 3.6 或更高版本
+- PostgreSQL 服务器
+- ClickHouse 服务器
+
+## 4. 项目运行方法
+按照以下步骤运行项目：
+
+1. **下载项目**：
+   ```bash
+   git clone <仓库 URL>
+   cd maxquant-service
+   ```
+
+2. **修改配置文件**：
+   打开 `maxquant-service-app/src/main/resources/application.yml` 文件，修改 PostgreSQL 和 ClickHouse 的数据库连接信息，包括用户名、密码等：
+   ```yaml
+   spring:
+     datasource:
+       url: jdbc:postgresql://localhost:5432/your_database # 您的 PostgreSQL 数据库
+       username: your_username # 您的用户名
+       password: your_password # 您的密码
+     clickhouse:
+       jdbc-url: jdbc:clickhouse://localhost:8123/your_clickhouse_db # 您的 ClickHouse 数据库
+       # ...
+   ```
+
+3. **构建项目**：
+   在终端运行以下命令：
+   ```bash
+   mvn clean install
+   ```
+
+4. **运行应用程序**：
+   构建成功后，运行以下命令启动服务器：
+   ```bash
+   java -jar maxquant-service-app/target/maxquant-service-app-1.0-SNAPSHOT.jar
+   ```
+
+5. **验证运行**：
+   服务器将在 `http://localhost:8080` 运行，可通过浏览器或 API 工具访问。
+
+## 5. API 概览
+本项目提供了多种 API，以下是主要功能及其 URL 前缀：
+
+| 功能                   | URL 前缀                        | 说明                             |
+|------------------------|---------------------------------|----------------------------------|
+| 用户认证               | `/api/v1/auth`                  | 处理登录和令牌验证               |
+| 市场数据               | `/api/v1/market`                | 获取 K 线、实时价格等数据        |
+| 回测执行               | `/api/v1/backtest`              | 运行 Python 脚本进行回测         |
+| 回测实例管理           | `/api/backtest-instances`       | 创建或删除回测实例               |
+| 回测报告               | `/api/backtest-reports`         | 查看回测结果报告                 |
+| 用户管理               | `/api/users`                    | 管理用户账户                     |
+| 策略模板               | `/api/strategy-templates`       | 管理回测策略模板                 |
+| 统计套利分析           | `/api/v1/statistical-arbitrage` | 执行专业统计分析                 |
+| 数据同步与修复         | `/api/v1/data-correction`       | 修复数据错误或同步数据           |
+
+### API 响应格式
+所有 API 返回统一的 JSON 格式：
+- **成功响应**：
+  ```json
+  {
+    "code": 200,
+    "message": "Success",
+    "data": { ... } // 实际数据
+  }
+  ```
+- **失败响应**：
+  ```json
+  {
+    "code": 500, // 错误代码
+    "message": "错误原因", // 错误信息
+    "data": null
+  }
+  ```
+
+前端使用 API 时，请先检查 `code` 是否为 200。
+
+## 6. Python 协作机制
+回测功能通过 Java 和 Python 的协作实现，具体流程如下：
+1. **前端发送请求**：
+   - 用户通过浏览器发起回测请求，请求到达 Java 的 `BacktestController`。
+2. **Java 准备 Python 环境**：
+   - `BacktestServiceImpl` 将回测所需信息（策略、交易对、时间范围等）写入 JSON 文件。
+   - 用户编写的 Python 策略代码保存为临时 `.py` 文件。
+3. **Java 调用 Python**：
+   - Java 通过系统命令运行 `backtest_runner.py` 脚本，并将 JSON 文件路径作为参数传递。
+   - 示例命令：`python3 launcher_new.py --config /tmp/config-12345.json`。
+4. **Python 执行回测**：
+   - `backtest_runner.py` 读取 JSON 文件并根据配置执行回测。
+   - 日志和结果通过 `print()` 输出到标准输出。
+5. **Java 接收 Python 输出**：
+   - Java 持续读取 Python 脚本的标准输出，逐行获取日志和结果。
+6. **Java 向前端发送数据**：
+   - Java 通过 WebSocket 实时将日志和结果发送到前端（浏览器），用户可实时查看回测进展。
+
+通过这种方式，Java 负责整体管理和通信，Python 负责计算和分析，实现了明确的分工。
+
+
+
+
+
 # maxquant-service (主に暗号資産データサービス)
 
 これは暗号資産（あんごうしさん）のデータ分析（ぶんせき）とバックテストのためのプロジェクトです。Spring Bootを使（つか）って作（つく）りました。
