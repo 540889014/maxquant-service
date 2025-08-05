@@ -43,7 +43,7 @@
 1. **プロジェクトをダウンロードします。**
    ```bash
    git clone <リポジトリのURL>
-   cd crypto-data-service
+   cd maxquant-service
    ```
 
 2. **設定（せってい）ファイルを変（か）えます。**
